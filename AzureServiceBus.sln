@@ -1,0 +1,41 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "emulator", "emulator", "{2048C711-B7C5-44F4-9DBF-6BF9A87D980C}"
+	ProjectSection(SolutionItems) = preProject
+		C:\Users\karee\Downloads\service-bus-emulator-main\service-bus-emulator-main\emulator\.env = C:\Users\karee\Downloads\service-bus-emulator-main\service-bus-emulator-main\emulator\.env
+		C:\Users\karee\Downloads\service-bus-emulator-main\service-bus-emulator-main\emulator\config.json = C:\Users\karee\Downloads\service-bus-emulator-main\service-bus-emulator-main\emulator\config.json
+		C:\Users\karee\Downloads\service-bus-emulator-main\service-bus-emulator-main\emulator\docker-compose.yaml = C:\Users\karee\Downloads\service-bus-emulator-main\service-bus-emulator-main\emulator\docker-compose.yaml
+	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Producer", "Producer\Producer.csproj", "{2E885DA5-63C3-4704-9732-0E5ABE20AA8D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Producer", "Producer\Producer.csproj", "{5A062E4C-45EC-4498-AF03-43E005BF6A60}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sender", "Sender\Sender.csproj", "{3181F162-0753-422E-BD45-B2A744B211CF}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Receiver", "Receiver\Receiver.csproj", "{9BF321AF-AD25-4C7B-A426-E3327DA5A85F}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{2E885DA5-63C3-4704-9732-0E5ABE20AA8D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2E885DA5-63C3-4704-9732-0E5ABE20AA8D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2E885DA5-63C3-4704-9732-0E5ABE20AA8D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2E885DA5-63C3-4704-9732-0E5ABE20AA8D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5A062E4C-45EC-4498-AF03-43E005BF6A60}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5A062E4C-45EC-4498-AF03-43E005BF6A60}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5A062E4C-45EC-4498-AF03-43E005BF6A60}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5A062E4C-45EC-4498-AF03-43E005BF6A60}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3181F162-0753-422E-BD45-B2A744B211CF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3181F162-0753-422E-BD45-B2A744B211CF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3181F162-0753-422E-BD45-B2A744B211CF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3181F162-0753-422E-BD45-B2A744B211CF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9BF321AF-AD25-4C7B-A426-E3327DA5A85F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9BF321AF-AD25-4C7B-A426-E3327DA5A85F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9BF321AF-AD25-4C7B-A426-E3327DA5A85F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9BF321AF-AD25-4C7B-A426-E3327DA5A85F}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal

@@ -16,8 +16,6 @@ class Program
         await using var sender = client.CreateSender(queueName);
 
         Console.WriteLine("=== Service Bus Sender ===");
-        Console.WriteLine("Type a message and press Enter to send.");
-        Console.WriteLine("Type 'exit' to quit.\n");
 
         while (true)
         {
@@ -47,7 +45,7 @@ class Program
                     SessionId = "HIGH"
                 };
                 
-                await sender.ScheduleMessageAsync(busMessage, DateTimeOffset.UtcNow.AddSeconds(20));
+                await sender.ScheduleMessageAsync(busMessage, DateTimeOffset.UtcNow.AddSeconds(5));
                 Console.WriteLine($"Sent: {message.Text} at {message.Timestamp})\n");
             }
             catch (Exception ex)

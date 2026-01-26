@@ -10,7 +10,7 @@ class Program
         var connectionString =
             "Endpoint=sb://localhost;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=SAS_KEY_VALUE;UseDevelopmentEmulator=true;";
 
-        var queueName = "queue.1";
+        var queueName = "topic.1"; 
 
         await using var client = new ServiceBusClient(connectionString);
         await using var sender = client.CreateSender(queueName);
@@ -29,24 +29,25 @@ class Program
 
             try
             {
-                var message = new ChatMessage
+                var message = new ChatMessage()
                 {
-                    Text = input,
+                    Text =input,
                     Timestamp = DateTime.UtcNow
                     
                 };
+                
 
                 var busMessage = new ServiceBusMessage(
                     BinaryData.FromString(JsonSerializer.Serialize(message)))
                 {
-                    MessageId = Guid.NewGuid().ToString(),
+                    MessageId = Guid.NewGuid().ToString(), // that will be used to detect duplication within duplication window
                     CorrelationId = Guid.NewGuid().ToString(),
                     // ScheduledEnqueueTime = DateTimeOffset.UtcNow.AddSeconds(20)
-                    SessionId = "HIGH"
+                    // SessionId = "HIGH" // can be used for priority
                 };
-                
-                await sender.ScheduleMessageAsync(busMessage, DateTimeOffset.UtcNow.AddSeconds(5));
-                Console.WriteLine($"Sent: {message.Text} at {message.Timestamp})\n");
+
+                await sender.ScheduleMessageAsync(busMessage, DateTimeOffset.UtcNow.AddSeconds(0));
+                Console.WriteLine($"Sent: {message.Text} at {DateTime.UtcNow})\n");
             }
             catch (Exception ex)
             {
@@ -59,4 +60,10 @@ public class ChatMessage
 {
     public string Text { get; set; } = string.Empty;
     public DateTime Timestamp { get; set; }
+}
+public class Transaction
+{
+    public string Id { get; set; } =  Guid.NewGuid().ToString();
+    public decimal Amount { get; set; } = Decimal.Zero;
+    
 }

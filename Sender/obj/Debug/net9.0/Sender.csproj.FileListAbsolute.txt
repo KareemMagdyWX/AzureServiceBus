@@ -27,3 +27,32 @@ K:\Kareem's\Programming vol.3\Github\AzureServiceBus\AzureServiceBus\Sender\obj\
 K:\Kareem's\Programming vol.3\Github\AzureServiceBus\AzureServiceBus\Sender\obj\Debug\net9.0\Sender.genruntimeconfig.cache
 K:\Kareem's\Programming vol.3\Github\AzureServiceBus\AzureServiceBus\Sender\obj\Debug\net9.0\ref\Sender.dll
 K:\Kareem's\Programming vol.3\Github\AzureServiceBus\AzureServiceBus\Sender\obj\Debug\net9.0\Sender.sourcelink.json
+C:\Users\hp\Documents\GitHub\AzureServiceBus\Sender\bin\Debug\net9.0\Sender.exe
+C:\Users\hp\Documents\GitHub\AzureServiceBus\Sender\bin\Debug\net9.0\Sender.deps.json
+C:\Users\hp\Documents\GitHub\AzureServiceBus\Sender\bin\Debug\net9.0\Sender.runtimeconfig.json
+C:\Users\hp\Documents\GitHub\AzureServiceBus\Sender\bin\Debug\net9.0\Sender.dll
+C:\Users\hp\Documents\GitHub\AzureServiceBus\Sender\bin\Debug\net9.0\Sender.pdb
+C:\Users\hp\Documents\GitHub\AzureServiceBus\Sender\bin\Debug\net9.0\Azure.Core.dll
+C:\Users\hp\Documents\GitHub\AzureServiceBus\Sender\bin\Debug\net9.0\Azure.Core.Amqp.dll
+C:\Users\hp\Documents\GitHub\AzureServiceBus\Sender\bin\Debug\net9.0\Azure.Messaging.ServiceBus.dll
+C:\Users\hp\Documents\GitHub\AzureServiceBus\Sender\bin\Debug\net9.0\Microsoft.Azure.Amqp.dll
+C:\Users\hp\Documents\GitHub\AzureServiceBus\Sender\bin\Debug\net9.0\Microsoft.Bcl.AsyncInterfaces.dll
+C:\Users\hp\Documents\GitHub\AzureServiceBus\Sender\bin\Debug\net9.0\Microsoft.Extensions.Configuration.dll
+C:\Users\hp\Documents\GitHub\AzureServiceBus\Sender\bin\Debug\net9.0\Microsoft.Extensions.Configuration.Abstractions.dll
+C:\Users\hp\Documents\GitHub\AzureServiceBus\Sender\bin\Debug\net9.0\Microsoft.Extensions.DependencyInjection.Abstractions.dll
+C:\Users\hp\Documents\GitHub\AzureServiceBus\Sender\bin\Debug\net9.0\Microsoft.Extensions.Logging.Abstractions.dll
+C:\Users\hp\Documents\GitHub\AzureServiceBus\Sender\bin\Debug\net9.0\Microsoft.Extensions.Primitives.dll
+C:\Users\hp\Documents\GitHub\AzureServiceBus\Sender\bin\Debug\net9.0\System.ClientModel.dll
+C:\Users\hp\Documents\GitHub\AzureServiceBus\Sender\bin\Debug\net9.0\System.Memory.Data.dll
+C:\Users\hp\Documents\GitHub\AzureServiceBus\Sender\obj\Debug\net9.0\Sender.csproj.AssemblyReference.cache
+C:\Users\hp\Documents\GitHub\AzureServiceBus\Sender\obj\Debug\net9.0\Sender.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\hp\Documents\GitHub\AzureServiceBus\Sender\obj\Debug\net9.0\Sender.AssemblyInfoInputs.cache
+C:\Users\hp\Documents\GitHub\AzureServiceBus\Sender\obj\Debug\net9.0\Sender.AssemblyInfo.cs
+C:\Users\hp\Documents\GitHub\AzureServiceBus\Sender\obj\Debug\net9.0\Sender.csproj.CoreCompileInputs.cache
+C:\Users\hp\Documents\GitHub\AzureServiceBus\Sender\obj\Debug\net9.0\Sender.sourcelink.json
+C:\Users\hp\Documents\GitHub\AzureServiceBus\Sender\obj\Debug\net9.0\Sender.csproj.Up2Date
+C:\Users\hp\Documents\GitHub\AzureServiceBus\Sender\obj\Debug\net9.0\Sender.dll
+C:\Users\hp\Documents\GitHub\AzureServiceBus\Sender\obj\Debug\net9.0\refint\Sender.dll
+C:\Users\hp\Documents\GitHub\AzureServiceBus\Sender\obj\Debug\net9.0\Sender.pdb
+C:\Users\hp\Documents\GitHub\AzureServiceBus\Sender\obj\Debug\net9.0\Sender.genruntimeconfig.cache
+C:\Users\hp\Documents\GitHub\AzureServiceBus\Sender\obj\Debug\net9.0\ref\Sender.dll

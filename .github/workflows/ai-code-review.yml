@@ -1,9 +1,12 @@
 name: AI .NET Code Review
 
 on:
-  pull_request:
-    branches: [main]
-    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: "Pull Request number to review"
+        required: true
+        type: number
 
 permissions:
   contents: read

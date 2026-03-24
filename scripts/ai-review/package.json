@@ -1,0 +1,13 @@
+{
+  "name": "ai-dotnet-review-agents",
+  "version": "2.0.0",
+  "description": "Plugin-based AI agents for .NET code review on GitHub PRs",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.39.0"
+  }
+}

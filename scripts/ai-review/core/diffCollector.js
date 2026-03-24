@@ -19,9 +19,9 @@ function isReviewable(filePath) {
  * Returns { payload, fileCount }
  */
 export function collectDiffs() {
-  execSync("git fetch origin main", { stdio: "ignore" });
+  execSync("git fetch origin master", { stdio: "ignore" });
 
-  const changedFiles = execSync("git diff --name-only origin/main...HEAD")
+  const changedFiles = execSync("git diff --name-only origin/master...HEAD")
     .toString()
     .trim()
     .split("\n")
@@ -44,7 +44,7 @@ export function collectDiffs() {
     }
 
     console.log(`✅ Reviewing: ${file}`);
-    const diff = execSync(`git diff origin/main...HEAD -- "${file}"`).toString();
+    const diff = execSync(`git diff origin/master...HEAD -- "${file}"`).toString();
 
     payload += `\n===== FILE: ${file} =====\n${diff}\n========================\n`;
     fileCount++;

@@ -23,6 +23,13 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Debug - show files
+        run: |
+          echo "=== config.js content ==="
+          cat scripts/ai-review/config.js
+          echo ""
+          echo "=== agents folder structure ==="
+          find scripts/ai-review/agents -type f
       - name: Checkout PR branch
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}

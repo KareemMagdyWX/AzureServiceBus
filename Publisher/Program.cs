@@ -14,8 +14,11 @@ class Program
 
         await using var client = new ServiceBusClient(connectionString);
         await using var sender = client.CreateSender(queueName);
+        /// lkfjalkfjldk aj =bad - code -l; kf;adl
 
-        Console.WriteLine("=== Service Bus Sender ===");
+
+        
+        Console.Write("=== Service Bus Sender ===");
 
         while (true)
         {

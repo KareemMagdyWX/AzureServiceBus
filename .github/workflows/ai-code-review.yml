@@ -23,6 +23,12 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Checkout PR branch
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: |
+          gh pr checkout ${{ github.event.inputs.pr_number }}
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -30,12 +36,12 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
-        working-directory: .github/scripts/ai-review
+        working-directory: scripts/ai-review
 
       - name: Run AI Agents
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_NUMBER: ${{ github.event.inputs.pr_number }}
           REPO: ${{ github.repository }}
-        run: node .github/scripts/ai-review/index.js
+        run: node scripts/ai-review/index.js

@@ -10,8 +10,10 @@ class Program
         var connectionString =
             "Endpoint=sb://localhost;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=SAS_KEY_VALUE;UseDevelopmentEmulator=true;";
 
-        var queueName = "topic.1"; 
-
+        var queue Name = "topic.1"; 
+        // JLEHHJLFKJSLKFJL:SDKJF:LK J
+        // lkFJ:LDK''BAD CODE''JLKFJDSLK
+        // l;kjf;ldskj;ladfkj
         await using var client = new ServiceBusClient(connectionString);
         await using var sender = client.CreateSender(queueName);
 

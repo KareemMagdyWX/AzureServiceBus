@@ -2,15 +2,19 @@
 'use strict';
 
 /**
- * Creates a Taiga task from a GitHub PR when someone comments `/taiga`.
+ * Creates a Taiga task for a pull request.
  *
- *   /taiga
+ * Runs automatically when a PR opens. Optional overrides go on their own
+ * line, either in the PR description or in a follow-up PR comment:
+ *
  *   /taiga assigned_to=@octocat
- *   /taiga assigned_to=@octocat status="Ready for test"
+ *   /taiga status="Ready for test"
  *   /taiga us=412
  *
- * Defaults: assignee = whoever commented, status = "New",
+ * Defaults: assignee = PR author (or commenter), status = "New",
  * project + user story = .github/taiga.yml, watchers = PR reviewers.
+ *
+ * Re-running is always safe — tasks are keyed on the PR url.
  */
 
 const fs = require('fs');
@@ -24,8 +28,8 @@ const {
   GITHUB_REPOSITORY,
   PR_NUMBER,
   COMMENT_ID,
-  COMMENT_BODY,
-  COMMENT_AUTHOR,
+  TRIGGER_BODY,
+  TRIGGER_AUTHOR,
   CONFIG_PATH = '.github/taiga.yml',
 } = process.env;
 
@@ -53,13 +57,16 @@ async function gh(path, options = {}) {
   return res.status === 204 ? null : res.json();
 }
 
-// Feedback on the triggering comment. Never let these throw — they are
-// cosmetic, and a failure here must not mask the real error.
+// Feedback on the trigger. Never let these throw — they are cosmetic, and a
+// failure here must not mask the real error. With no triggering comment
+// (a pull_request event) the reaction goes on the PR itself.
 const react = (content) =>
-  gh(`/repos/${OWNER}/${REPO}/issues/comments/${COMMENT_ID}/reactions`, {
-    method: 'POST',
-    body: JSON.stringify({ content }),
-  }).catch((e) => console.warn(`could not react: ${e.message}`));
+  gh(
+    COMMENT_ID
+      ? `/repos/${OWNER}/${REPO}/issues/comments/${COMMENT_ID}/reactions`
+      : `/repos/${OWNER}/${REPO}/issues/${PR_NUMBER}/reactions`,
+    { method: 'POST', body: JSON.stringify({ content }) }
+  ).catch((e) => console.warn(`could not react: ${e.message}`));
 
 const reply = (body) =>
   gh(`/repos/${OWNER}/${REPO}/issues/${PR_NUMBER}/comments`, {
@@ -183,7 +190,7 @@ async function run() {
   const cfg = yaml.load(fs.readFileSync(CONFIG_PATH, 'utf8')) || {};
   if (!cfg.project) throw new UserError(`\`project\` is missing from \`${CONFIG_PATH}\`.`);
 
-  const directives = parseDirectives(COMMENT_BODY);
+  const directives = parseDirectives(TRIGGER_BODY);
   const projectId = Number(cfg.project);
   const usId = Number(directives.us || cfg.user_story || 0);
   if (!usId) {
@@ -208,7 +215,7 @@ async function run() {
   const members = new Set(memberList.map((u) => u.id));
 
   // Assignee: explicit wins, otherwise whoever ran the command.
-  const rawAssignee = String(directives.assigned_to || COMMENT_AUTHOR).replace(/^@/, '');
+  const rawAssignee = String(directives.assigned_to || TRIGGER_AUTHOR).replace(/^@/, '');
   const assigneeId = taigaIdFor(rawAssignee, cfg.users || {});
   if (!assigneeId) {
     throw new UserError(

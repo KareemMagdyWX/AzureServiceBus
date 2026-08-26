@@ -18,10 +18,9 @@
  */
 
 const fs = require('fs');
-const yaml = require('js-yaml');
 
 const {
-  TAIGA_URL,
+  TAIGA_URL = 'https://api.taiga.io',
   TAIGA_USERNAME,
   TAIGA_PASSWORD,
   GITHUB_TOKEN,
@@ -31,6 +30,10 @@ const {
   TRIGGER_BODY,
   TRIGGER_AUTHOR,
   CONFIG_PATH = '.github/taiga.yml',
+  TAIGA_PROJECT,
+  TAIGA_USER_STORY,
+  TAIGA_WATCHER,
+  TAIGA_USERS,
 } = process.env;
 
 const [OWNER, REPO] = String(GITHUB_REPOSITORY || '').split('/');
@@ -258,16 +261,86 @@ async function resolveWatchers(cfg, members) {
 
 // ---------------------------------------------------------------------- Main
 
-async function run() {
-  for (const [k, v] of Object.entries({ TAIGA_URL, TAIGA_USERNAME, TAIGA_PASSWORD, GITHUB_TOKEN })) {
-    if (!v) throw new Error(`Missing required env var ${k}`);
+/**
+ * Config comes from action inputs when running as a shared action, or from
+ * .github/taiga.yml for a single-repo install. Inputs win when both exist.
+ * `source` is carried through so error messages point at the right place.
+ */
+function loadConfig() {
+  if (TAIGA_PROJECT) {
+    let users = {};
+    if (TAIGA_USERS && TAIGA_USERS.trim()) {
+      try {
+        users = JSON.parse(TAIGA_USERS);
+      } catch (e) {
+        throw new UserError(
+          'The `users` input is not valid JSON. Expected something like ' +
+            '`{"octocat": 42, "alice-dev": 57}`. ' +
+            'If it comes from an org variable, check for a trailing comma or single quotes.'
+        );
+      }
+      if (Array.isArray(users) || typeof users !== 'object' || users === null) {
+        throw new UserError('The `users` input must be a JSON object of login -> taiga id.');
+      }
+    }
+    return {
+      source: 'the action inputs',
+      project: Number(TAIGA_PROJECT),
+      user_story: Number(TAIGA_USER_STORY || 0),
+      watcher: TAIGA_WATCHER
+        ? TAIGA_WATCHER.split(',').map((s) => s.trim()).filter(Boolean)
+        : undefined,
+      users,
+    };
   }
 
   if (!fs.existsSync(CONFIG_PATH)) {
-    throw new UserError(`No config at \`${CONFIG_PATH}\`. See the setup notes to create one.`);
+    throw new UserError(
+      `No config found. Either pass the \`project\` input, or create \`${CONFIG_PATH}\`.`
+    );
+  }
+  // Required only for the file path, so a pure-inputs run needs no dependency.
+  let yaml;
+  try {
+    yaml = require('js-yaml');
+  } catch {
+    throw new UserError(
+      `Reading \`${CONFIG_PATH}\` needs js-yaml, which is not installed. ` +
+        'Either add `npm install --no-save js-yaml@4` before this step, or ' +
+        'pass the `project` / `user-story` / `users` inputs instead.'
+    );
   }
   const cfg = yaml.load(fs.readFileSync(CONFIG_PATH, 'utf8')) || {};
-  if (!cfg.project) throw new UserError(`\`project\` is missing from \`${CONFIG_PATH}\`.`);
+  cfg.source = `\`${CONFIG_PATH}\``;
+  return cfg;
+}
+
+const CREDENTIAL_HELP = {
+  TAIGA_USERNAME: 'Taiga service account login',
+  TAIGA_PASSWORD: 'Taiga service account password',
+  GITHUB_TOKEN: 'usually `${{ secrets.GITHUB_TOKEN }}`, which GitHub provides automatically',
+};
+
+async function run() {
+  // GitHub does not enforce `required: true` on composite action inputs at
+  // runtime, so an unset secret arrives as an empty string rather than
+  // failing the step. Catch that here with a message that says where to fix it.
+  const missing = ['TAIGA_USERNAME', 'TAIGA_PASSWORD', 'GITHUB_TOKEN'].filter(
+    (k) => !process.env[k]
+  );
+  if (missing.length) {
+    throw new UserError(
+      `Missing credential(s): ${missing.map((k) => `\`${k}\``).join(', ')}.\n\n` +
+        missing.map((k) => `- \`${k}\` — ${CREDENTIAL_HELP[k]}`).join('\n') +
+        '\n\nSecrets resolve environment > repository > organization, so either ' +
+        'scope works. If you set them as **organization** secrets, check the ' +
+        "secret's repository access includes this repo — an org secret scoped to " +
+        'other repositories resolves to an empty string here, with no warning.'
+    );
+  }
+
+  const cfg = loadConfig();
+  if (!cfg.project) throw new UserError(`\`project\` is missing from ${cfg.source}.`);
 
   const directives = parseDirectives(TRIGGER_BODY);
   const projectId = Number(cfg.project);
@@ -295,7 +368,7 @@ async function run() {
   const assigneeId = taigaIdFor(rawAssignee, cfg.users || {});
   if (!assigneeId) {
     throw new UserError(
-      `\`${rawAssignee}\` is not in the \`users\` map in \`${CONFIG_PATH}\`. ` +
+      `\`${rawAssignee}\` is not in the \`users\` map in ${cfg.source}. ` +
         'Add their Taiga id and try again.'
     );
   }
@@ -396,7 +469,7 @@ async function run() {
 
   if (unmapped.length) {
     notes.push(
-      `> Not watching (missing from \`users\` in \`${CONFIG_PATH}\`): ` +
+      `> Not watching (missing from \`users\` in ${cfg.source}): ` +
         unmapped.map((l) => `\`${l}\``).join(', ')
     );
   }

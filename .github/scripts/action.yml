@@ -1,0 +1,72 @@
+# Lives at the ROOT of a central repo, e.g. my-org/taiga-automation
+#
+#   my-org/taiga-automation
+#   ├── action.yml          <- this file
+#   └── taiga-sync.js
+#
+# For a private central repo, enable
+#   Settings -> Actions -> General -> Access
+#     "Accessible from repositories in the organization"
+# Runners then fetch it automatically. No PAT required.
+
+name: Taiga Sync
+description: Create a Taiga task for a pull request, assigned to the author.
+
+inputs:
+  taiga-username:
+    description: Taiga service account login. Use an org secret.
+    required: true
+  taiga-password:
+    description: Taiga service account password. Use an org secret.
+    required: true
+  github-token:
+    description: Usually secrets.GITHUB_TOKEN. Needs issues+pull-requests write.
+    required: true
+  taiga-url:
+    description: Taiga API base. Defaults to the hosted cloud.
+    required: false
+    default: https://api.taiga.io
+  project:
+    description: Numeric Taiga project id. Per repo.
+    required: true
+  user-story:
+    description: User story ref - the number from the Taiga URL (/us/528 -> 528).
+    required: true
+  users:
+    description: >-
+      JSON map of GitHub login to Taiga user id, e.g. {"octocat": 42}.
+      Set this once as an org variable and pass vars.TAIGA_USERS everywhere.
+    required: false
+    default: '{}'
+  watcher:
+    description: Fallback watcher when a PR has no reviewers. Comma-separated for several.
+    required: false
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+    - name: Create Taiga task
+      shell: bash
+      # GITHUB_ACTION_PATH is where the runner checked this action out,
+      # which is how the script is found without checking out anything.
+      run: node "$GITHUB_ACTION_PATH/taiga-sync.js"
+      env:
+        TAIGA_URL: ${{ inputs.taiga-url }}
+        TAIGA_USERNAME: ${{ inputs.taiga-username }}
+        TAIGA_PASSWORD: ${{ inputs.taiga-password }}
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+
+        TAIGA_PROJECT: ${{ inputs.project }}
+        TAIGA_USER_STORY: ${{ inputs.user-story }}
+        TAIGA_USERS: ${{ inputs.users }}
+        TAIGA_WATCHER: ${{ inputs.watcher }}
+
+        # github.* here refers to the CALLING repo, which is what we want.
+        PR_NUMBER: ${{ github.event.pull_request.number || github.event.issue.number }}
+        TRIGGER_BODY: ${{ github.event.comment.body || github.event.pull_request.body }}
+        TRIGGER_AUTHOR: ${{ github.event.comment.user.login || github.event.pull_request.user.login }}
+        COMMENT_ID: ${{ github.event.comment.id }}

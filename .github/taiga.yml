@@ -15,7 +15,7 @@ project: 1782660
 user_story: 528
 
 # Fallback watcher when a PR has no reviewers yet. GitHub login.
-senior: m-baset
+watcher: BasetWaffarx
 
 # GitHub login -> Taiga user id. Everyone who might be assigned or
 # review needs an entry; unmapped reviewers are skipped with a warning,
@@ -23,5 +23,5 @@ senior: m-baset
 #   curl -s -H "Authorization: Bearer $TOKEN" \
 #     "https://api.taiga.io/api/v1/users?project=12" | jq '.[] | {id, username, full_name}'
 users:
-  kareem: 922606
-  m-baset: 816615
+  KareemMagdyWX: 922606
+  BasetWaffarx: 816615

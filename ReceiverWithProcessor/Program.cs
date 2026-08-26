@@ -3,7 +3,7 @@ using Azure.Messaging.ServiceBus;
 
 var connectionString =
     "Endpoint=sb://localhost;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=SAS_KEY_VALUE;UseDevelopmentEmulator=true;";
-
+// hello there
 await using var client = new ServiceBusClient(connectionString);
 
 var processor = client.CreateProcessor("queue.1" , new ServiceBusProcessorOptions

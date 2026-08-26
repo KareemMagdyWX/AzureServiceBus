@@ -1,4 +1,9 @@
 # .github/workflows/taiga-sync.yml
+#
+# MUST live on the default branch. issue_comment only ever runs the copy
+# from main — a workflow on a feature branch never fires, even for comments
+# on that branch's own PR.
+
 name: Taiga sync
 
 on:
@@ -6,31 +11,114 @@ on:
     types: [created]
 
 permissions:
-  contents: read        # checkout + read .github/taiga.yml
-  issues: write         # react to the comment
-  pull-requests: write  # post the result back
+  contents: read
 
-# Two people commenting at once must not race into duplicate tasks.
 concurrency:
   group: taiga-sync-${{ github.event.issue.number }}
   cancel-in-progress: false
 
 jobs:
+  # ---------------------------------------------------------------------
+  # Runs on ANY slash command on a PR, including malformed ones, so a
+  # rejected comment still leaves a trace explaining why. Holds no secrets
+  # and calls no external API, so running it wide open costs nothing.
+  # ---------------------------------------------------------------------
+  diagnose:
+    if: >-
+      github.event.issue.pull_request != null &&
+      startsWith(github.event.comment.body, '/')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Inspect trigger
+        env:
+          # Never interpolate comment text into a run: block. A comment
+          # body is attacker-controlled; via env it is inert data.
+          BODY: ${{ github.event.comment.body }}
+          ASSOC: ${{ github.event.comment.author_association }}
+          ACTOR: ${{ github.event.comment.user.login }}
+        run: |
+          FIRST=$(printf '%s' "$BODY" | head -1)
+          PASS=1
+
+          echo "::group::Raw event"
+          echo "commenter    : $ACTOR"
+          echo "association  : $ASSOC"
+          echo "workflow ref : $GITHUB_REF"
+          echo "first line   : $(printf '%s' "$FIRST" | cat -A)"
+          echo "::endgroup::"
+          # cat -A exposes invisible characters. A non-breaking space or a
+          # stray \r from copy-paste looks identical to correct text but
+          # breaks the prefix match.
+
+          case "$BODY" in
+            /taiga*)
+              echo "prefix       : OK" ;;
+            *)
+              echo "prefix       : FAIL - body must START with /taiga"
+              PASS=0
+              case "$FIRST" in
+                */tagia*|*/taig\ *|*/tiaga*|*/tiga*)
+                  echo "               ^ that looks like a typo of /taiga" ;;
+                *taiga*)
+                  echo "               ^ /taiga appears but not at the start" ;;
+              esac ;;
+          esac
+
+          case "$ASSOC" in
+            OWNER|MEMBER|COLLABORATOR)
+              echo "author       : OK ($ASSOC)" ;;
+            *)
+              echo "author       : FAIL ($ASSOC)"
+              echo "               ^ add $ACTOR as a repo collaborator."
+              echo "                 Org membership alone is not enough."
+              PASS=0 ;;
+          esac
+
+          if [ -f .github/taiga.yml ]; then
+            echo "config       : found"
+            grep -qiE "^[[:space:]]+$ACTOR[[:space:]]*:" .github/taiga.yml \
+              && echo "user map     : $ACTOR present" \
+              || echo "user map     : WARNING - $ACTOR missing from users:"
+          else
+            echo "config       : FAIL - no .github/taiga.yml on this branch"
+            PASS=0
+          fi
+
+          echo
+          [ "$PASS" = "1" ] \
+            && echo "VERDICT: gate passes, sync job should run" \
+            || echo "VERDICT: gate rejects this comment, sync job will skip"
+
+          {
+            echo "### Taiga trigger check"
+            echo "\`$ASSOC\` / \`$ACTOR\`"
+            [ "$PASS" = "1" ] && echo "Gate **passed**." || echo "Gate **rejected** - see job log."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  # ---------------------------------------------------------------------
+  # The real thing. Gate is unchanged: this job holds Taiga credentials
+  # and runs with repo secrets even for fork PRs, so author_association
+  # is what stops any drive-by commenter from triggering it.
+  # ---------------------------------------------------------------------
   sync:
-    # issue_comment fires on plain issues too, so confirm this is a PR.
-    # author_association is the security gate: this workflow runs with
-    # repository secrets even when the PR comes from a fork, so anyone
-    # who can comment could otherwise trigger it.
     if: >-
       github.event.issue.pull_request != null &&
       startsWith(github.event.comment.body, '/taiga') &&
       contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association)
 
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: write
 
     steps:
-      # Checks out the base branch, not the PR head — deliberate. Never run
-      # untrusted PR code in a job that holds your Taiga credentials.
+      # Base branch, not the PR head - never check out fork code in a job
+      # that holds your Taiga password.
       - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4

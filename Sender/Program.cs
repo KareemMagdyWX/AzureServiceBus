@@ -9,7 +9,7 @@ class Program
     {
         var connectionString =
             "Endpoint=sb://localhost;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=SAS_KEY_VALUE;UseDevelopmentEmulator=true;";
-
+// bla bla
         var queueName = "topic.1"; 
 
         await using var client = new ServiceBusClient(connectionString);

@@ -6,16 +6,16 @@
 # Numeric project id. Find it with:
 #   curl -s -H "Authorization: Bearer $TOKEN" \
 #     "https://api.taiga.io/api/v1/projects?member=me" | jq '.[] | {id, name}'
-project: 12
+project: 1782660
 
 # Default user story that new tasks hang under.
 # Override per PR with `/taiga us=412`.
 #   curl -s -H "Authorization: Bearer $TOKEN" \
 #     "https://api.taiga.io/api/v1/userstories?project=12" | jq '.[] | {id, ref, subject}'
-user_story: 345
+user_story: 528
 
 # Fallback watcher when a PR has no reviewers yet. GitHub login.
-senior: alice-dev
+senior: m-baset
 
 # GitHub login -> Taiga user id. Everyone who might be assigned or
 # review needs an entry; unmapped reviewers are skipped with a warning,
@@ -23,6 +23,5 @@ senior: alice-dev
 #   curl -s -H "Authorization: Bearer $TOKEN" \
 #     "https://api.taiga.io/api/v1/users?project=12" | jq '.[] | {id, username, full_name}'
 users:
-  octocat: 42
-  alice-dev: 57
-  bob: 61
+  kareem: 922606
+  m-baset: 816615

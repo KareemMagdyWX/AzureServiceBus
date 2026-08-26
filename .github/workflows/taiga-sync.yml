@@ -1,0 +1,52 @@
+# .github/workflows/taiga-sync.yml
+name: Taiga sync
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read        # checkout + read .github/taiga.yml
+  issues: write         # react to the comment
+  pull-requests: write  # post the result back
+
+# Two people commenting at once must not race into duplicate tasks.
+concurrency:
+  group: taiga-sync-${{ github.event.issue.number }}
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    # issue_comment fires on plain issues too, so confirm this is a PR.
+    # author_association is the security gate: this workflow runs with
+    # repository secrets even when the PR comes from a fork, so anyone
+    # who can comment could otherwise trigger it.
+    if: >-
+      github.event.issue.pull_request != null &&
+      startsWith(github.event.comment.body, '/taiga') &&
+      contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association)
+
+    runs-on: ubuntu-latest
+
+    steps:
+      # Checks out the base branch, not the PR head — deliberate. Never run
+      # untrusted PR code in a job that holds your Taiga credentials.
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - run: npm install --no-save js-yaml@4
+
+      - name: Create Taiga task
+        run: node .github/scripts/taiga-sync.js
+        env:
+          TAIGA_URL: ${{ secrets.TAIGA_URL || 'https://api.taiga.io' }}
+          TAIGA_USERNAME: ${{ secrets.TAIGA_USERNAME }}
+          TAIGA_PASSWORD: ${{ secrets.TAIGA_PASSWORD }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.issue.number }}
+          COMMENT_ID: ${{ github.event.comment.id }}
+          COMMENT_BODY: ${{ github.event.comment.body }}
+          COMMENT_AUTHOR: ${{ github.event.comment.user.login }}

@@ -181,8 +181,8 @@ function resolveStatus(statuses, wanted, projectDefaultId) {
 }
 
 /**
- * Reviewers, then the config senior. `requested_reviewers` only holds people
- * who have not reviewed yet, so submitted reviews are merged in too.
+ * Reviewers, then the config `watcher`. `requested_reviewers` only holds
+ * people who have not reviewed yet, so submitted reviews are merged in too.
  */
 async function resolveWatchers(cfg, members) {
   const logins = new Set();
@@ -193,7 +193,17 @@ async function resolveWatchers(cfg, members) {
   const reviews = await gh(`/repos/${OWNER}/${REPO}/pulls/${PR_NUMBER}/reviews?per_page=100`);
   for (const r of reviews || []) if (r.user) logins.add(r.user.login);
 
-  if (logins.size === 0 && cfg.senior) logins.add(cfg.senior);
+  // `senior` was the old name for this key; still honoured so an existing
+  // config does not quietly stop adding a fallback watcher.
+  if (cfg.watcher === undefined && cfg.senior !== undefined) {
+    console.warn('config: `senior` is deprecated, rename it to `watcher`');
+  }
+  const fallback = cfg.watcher ?? cfg.senior;
+
+  // Accepts a single login or a list.
+  if (logins.size === 0 && fallback) {
+    for (const l of [].concat(fallback)) logins.add(l);
+  }
 
   const ids = [];
   const unmapped = [];

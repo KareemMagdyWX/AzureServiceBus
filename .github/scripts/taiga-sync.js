@@ -236,12 +236,24 @@ async function resolveWatchers(cfg, members) {
 
   const ids = [];
   const unmapped = [];
+  const notMember = [];
   for (const login of logins) {
     const id = taigaIdFor(login, cfg.users || {});
-    if (id && members.has(id)) ids.push(id);
-    else unmapped.push(login);
+    if (!id) unmapped.push(login);
+    else if (!members.has(id)) notMember.push(`${login} (taiga id ${id})`);
+    else ids.push(id);
   }
-  return { pr, ids: [...new Set(ids)], unmapped };
+
+  // Watchers going missing is the most common surprise here, so show the
+  // whole resolution chain rather than just the result.
+  step(
+    `watchers: candidates [${[...logins].join(', ') || 'none'}] -> ` +
+      `resolved [${ids.join(', ') || 'none'}]` +
+      (unmapped.length ? `, unmapped [${unmapped.join(', ')}]` : '') +
+      (notMember.length ? `, not project members [${notMember.join(', ')}]` : '')
+  );
+
+  return { pr, ids: [...new Set(ids)], unmapped, notMember };
 }
 
 // ---------------------------------------------------------------------- Main
@@ -295,7 +307,7 @@ async function run() {
 
   const status = resolveStatus(statuses, directives.status, project.default_task_status);
   step('resolving reviewers');
-  const { pr, ids: watchers, unmapped } = await resolveWatchers(cfg, members);
+  const { pr, ids: watchers, unmapped, notMember } = await resolveWatchers(cfg, members);
 
   // One task per PR, keyed on the PR url, so re-running is safe.
   step(`checking for an existing task under US ${story.id}`);
@@ -318,6 +330,13 @@ async function run() {
     .map((c) => `- [ ] \`${c.sha.slice(0, 7)}\` ${c.commit.message.split('\n')[0]}`)
     .join('\n');
 
+  // Named in the description as a fallback: if Taiga refuses the watchers
+  // field, at least the task says who should be looking at it.
+  const nameById = new Map(memberList.map((u) => [u.id, u.username || u.full_name || u.id]));
+  const watcherLine = watchers.length
+    ? `Watching: ${watchers.map((id) => `@${nameById.get(id)}`).join(', ')}`
+    : null;
+
   step('creating task');
   const created = await taiga('/tasks', {
     method: 'POST',
@@ -331,6 +350,7 @@ async function run() {
       description: [
         `Pull request: ${pr.html_url}`,
         `Branch: \`${pr.head.ref}\``,
+        ...(watcherLine ? [watcherLine] : []),
         '',
         '**Commits**',
         checklist || '_none_',
@@ -339,18 +359,52 @@ async function run() {
     }),
   });
 
-  // `watchers` on create is inconsistent across Taiga versions — verify.
-  let watcherNote = '';
+  // Taiga ignores `watchers` on create in some versions. Verify, and if it
+  // was dropped, retry with a PATCH — `version` is required because Taiga
+  // uses optimistic concurrency and rejects updates without it.
+  let applied = watchers.length;
+  const notes = [];
+
   if (watchers.length) {
-    const check = await taiga(`/tasks/${created.id}`).catch(() => null);
+    let check = await taiga(`/tasks/${created.id}`).catch(() => null);
+
     if (check && (check.watchers || []).length === 0) {
-      watcherNote = '\n\n> Watchers were not applied — see the setup notes on the `/watch` fallback.';
+      step('watchers dropped on create, retrying via PATCH');
+      const patched = await taiga(`/tasks/${created.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ watchers, version: check.version }),
+      }).catch((e) => {
+        step(`PATCH failed: ${e.message}`);
+        return null;
+      });
+
+      check = patched || (await taiga(`/tasks/${created.id}`).catch(() => null));
+      applied = check ? (check.watchers || []).length : 0;
+
+      if (applied === 0) {
+        notes.push(
+          '> Taiga would not accept watchers on this task, on create or via update. ' +
+            'The people below are named in the description instead so they still get a mention.'
+        );
+      } else {
+        step(`PATCH applied ${applied} watcher(s)`);
+      }
+    } else if (check) {
+      applied = (check.watchers || []).length;
     }
   }
+
   if (unmapped.length) {
-    watcherNote += `\n\n> Not added as watchers (no Taiga mapping): ${unmapped
-      .map((l) => `\`${l}\``)
-      .join(', ')}`;
+    notes.push(
+      `> Not watching (missing from \`users\` in \`${CONFIG_PATH}\`): ` +
+        unmapped.map((l) => `\`${l}\``).join(', ')
+    );
+  }
+  if (notMember.length) {
+    notes.push(
+      '> Not watching (not a member of this Taiga project): ' +
+        notMember.map((l) => `\`${l}\``).join(', ')
+    );
   }
 
   await react('rocket');
@@ -361,8 +415,8 @@ async function run() {
       `- **Assigned to** \`${rawAssignee}\``,
       `- **Status** ${status.name}`,
       `- **Under** US #${story.ref} — ${story.subject}`,
-      `- **Watching** ${watchers.length || 'nobody'}`,
-    ].join('\n') + watcherNote
+      `- **Watching** ${applied || 'nobody'}`,
+    ].join('\n') + (notes.length ? '\n\n' + notes.join('\n\n') : '')
   );
 }
 

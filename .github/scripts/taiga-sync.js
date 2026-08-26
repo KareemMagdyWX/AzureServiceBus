@@ -40,17 +40,34 @@ class UserError extends Error {}
 
 // ---------------------------------------------------------------- GitHub API
 
+// No timeout means a stalled connection hangs the job until GitHub's
+// 6-hour ceiling. Every request gets a hard ceiling instead.
+const REQUEST_TIMEOUT_MS = 20000;
+
+function step(msg) {
+  console.log(`[${new Date().toISOString().slice(11, 19)}] ${msg}`);
+}
+
 async function gh(path, options = {}) {
-  const res = await fetch(`https://api.github.com${path}`, {
-    ...options,
-    headers: {
-      Authorization: `Bearer ${GITHUB_TOKEN}`,
-      Accept: 'application/vnd.github+json',
-      'X-GitHub-Api-Version': '2022-11-28',
-      'Content-Type': 'application/json',
-      ...(options.headers || {}),
-    },
-  });
+  let res;
+  try {
+    res = await fetch(`https://api.github.com${path}`, {
+      ...options,
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+      headers: {
+        Authorization: `Bearer ${GITHUB_TOKEN}`,
+        Accept: 'application/vnd.github+json',
+        'X-GitHub-Api-Version': '2022-11-28',
+        'Content-Type': 'application/json',
+        ...(options.headers || {}),
+      },
+    });
+  } catch (e) {
+    if (e.name === 'TimeoutError' || e.name === 'AbortError') {
+      throw new Error(`GitHub ${path} timed out after ${REQUEST_TIMEOUT_MS / 1000}s`);
+    }
+    throw new Error(`GitHub ${path} failed: ${e.message}`);
+  }
   if (!res.ok) {
     throw new Error(`GitHub ${path} -> ${res.status} ${(await res.text()).slice(0, 300)}`);
   }
@@ -79,14 +96,26 @@ const reply = (body) =>
 let token = null;
 
 async function taiga(path, options = {}) {
-  const res = await fetch(`${TAIGA_URL}/api/v1${path}`, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...(options.headers || {}),
-    },
-  });
+  let res;
+  try {
+    res = await fetch(`${TAIGA_URL}/api/v1${path}`, {
+      ...options,
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(options.headers || {}),
+      },
+    });
+  } catch (e) {
+    if (e.name === 'TimeoutError' || e.name === 'AbortError') {
+      throw new Error(
+        `Taiga ${path} timed out after ${REQUEST_TIMEOUT_MS / 1000}s. ` +
+          `Check TAIGA_URL (currently ${TAIGA_URL}) and that Taiga is reachable.`
+      );
+    }
+    throw new Error(`Taiga ${path} failed: ${e.message}`);
+  }
   const text = await res.text();
   if (!res.ok) {
     throw new Error(`Taiga ${path} -> ${res.status} ${text.slice(0, 400)}`);
@@ -235,9 +264,11 @@ async function run() {
     throw new UserError('No user story. Set `user_story` in the config or pass `us=<ref>`.');
   }
 
+  step('authenticating to Taiga');
   await login();
 
   // Everything needed to validate before writing anything.
+  step(`fetching project ${projectId} metadata and user story ref ${usRef}`);
   const [project, statuses, memberList, story] = await Promise.all([
     taiga(`/projects/${projectId}`),
     taiga(`/task-statuses?project=${projectId}`),
@@ -263,9 +294,11 @@ async function run() {
   }
 
   const status = resolveStatus(statuses, directives.status, project.default_task_status);
+  step('resolving reviewers');
   const { pr, ids: watchers, unmapped } = await resolveWatchers(cfg, members);
 
   // One task per PR, keyed on the PR url, so re-running is safe.
+  step(`checking for an existing task under US ${story.id}`);
   const existing = await taiga(`/tasks?user_story=${story.id}`);
   const duplicate = (existing || []).find(
     (t) => Array.isArray(t.external_reference) && t.external_reference[1] === pr.html_url
@@ -278,12 +311,14 @@ async function run() {
     return;
   }
 
+  step('fetching commits');
   const commits = await gh(`/repos/${OWNER}/${REPO}/pulls/${PR_NUMBER}/commits?per_page=100`);
   const checklist = (commits || [])
     .filter((c) => (c.parents || []).length <= 1) // drop merge commits
     .map((c) => `- [ ] \`${c.sha.slice(0, 7)}\` ${c.commit.message.split('\n')[0]}`)
     .join('\n');
 
+  step('creating task');
   const created = await taiga('/tasks', {
     method: 'POST',
     body: JSON.stringify({
@@ -335,7 +370,9 @@ function taskUrl(project, task) {
   return `https://tree.taiga.io/project/${project.slug}/task/${task.ref}`;
 }
 
-run().catch(async (err) => {
+run()
+  .then(() => step('done'))
+  .catch(async (err) => {
   console.error(err);
   await react('confused');
   await reply(

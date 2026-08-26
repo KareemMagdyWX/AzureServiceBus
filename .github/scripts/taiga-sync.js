@@ -134,6 +134,34 @@ function taigaIdFor(login, users) {
   return key ? users[key] : null;
 }
 
+/**
+ * The number in a Taiga URL (/us/528) is the per-project `ref`, not the
+ * internal id that /userstories/{id} expects. People copy the URL, so try
+ * ref first and fall back to a raw id lookup.
+ */
+async function resolveUserStory(num, projectId) {
+  const byRef = await taiga(
+    `/userstories/by_ref?ref=${num}&project=${projectId}`
+  ).catch(() => null);
+  if (byRef && byRef.id) return byRef;
+
+  const byId = await taiga(`/userstories/${num}`).catch(() => null);
+  if (byId && byId.id && byId.project === projectId) return byId;
+
+  if (byId && byId.id) {
+    throw new UserError(
+      `User story id \`${num}\` exists but belongs to project ${byId.project}, ` +
+        `not ${projectId}. Check \`project\` in the config.`
+    );
+  }
+  throw new UserError(
+    `No user story \`#${num}\` in project ${projectId}. Use the number from ` +
+      `the Taiga URL — for \`/us/528\` that is \`528\`. If that is what you ` +
+      `used, confirm \`project\` in the config matches the project the story ` +
+      `lives in.`
+  );
+}
+
 function resolveStatus(statuses, wanted, projectDefaultId) {
   const names = statuses.map((s) => `\`${s.name}\``).join(', ');
 
@@ -192,9 +220,9 @@ async function run() {
 
   const directives = parseDirectives(TRIGGER_BODY);
   const projectId = Number(cfg.project);
-  const usId = Number(directives.us || cfg.user_story || 0);
-  if (!usId) {
-    throw new UserError('No user story. Set `user_story` in the config or pass `us=<id>`.');
+  const usRef = Number(directives.us || cfg.user_story || 0);
+  if (!usRef) {
+    throw new UserError('No user story. Set `user_story` in the config or pass `us=<ref>`.');
   }
 
   await login();
@@ -204,13 +232,8 @@ async function run() {
     taiga(`/projects/${projectId}`),
     taiga(`/task-statuses?project=${projectId}`),
     taiga(`/users?project=${projectId}`),
-    taiga(`/userstories/${usId}`).catch(() => null),
+    resolveUserStory(usRef, projectId),
   ]);
-
-  if (!story) throw new UserError(`User story \`#${usId}\` not found.`);
-  if (story.project !== projectId) {
-    throw new UserError(`User story \`#${usId}\` belongs to another project.`);
-  }
 
   const members = new Set(memberList.map((u) => u.id));
 
@@ -233,7 +256,7 @@ async function run() {
   const { pr, ids: watchers, unmapped } = await resolveWatchers(cfg, members);
 
   // One task per PR, keyed on the PR url, so re-running is safe.
-  const existing = await taiga(`/tasks?user_story=${usId}`);
+  const existing = await taiga(`/tasks?user_story=${story.id}`);
   const duplicate = (existing || []).find(
     (t) => Array.isArray(t.external_reference) && t.external_reference[1] === pr.html_url
   );
@@ -255,7 +278,7 @@ async function run() {
     method: 'POST',
     body: JSON.stringify({
       project: projectId,
-      user_story: usId,
+      user_story: story.id,
       subject: `${pr.title} (#${PR_NUMBER})`,
       assigned_to: assigneeId,
       status: status.id,

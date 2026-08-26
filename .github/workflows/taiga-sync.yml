@@ -53,6 +53,10 @@ jobs:
 
     runs-on: ubuntu-latest
 
+    # Without this a stalled run holds the concurrency group open and every
+    # later run queues behind it forever, which looks exactly like a freeze.
+    timeout-minutes: 5
+
     steps:
       # Checks out the base branch, never fork code, since this job holds
       # your Taiga password.
@@ -63,6 +67,7 @@ jobs:
           node-version: '20'
 
       - run: npm install --no-save js-yaml@4
+        timeout-minutes: 2
 
       - name: Create Taiga task
         run: node .github/scripts/taiga-sync.js
